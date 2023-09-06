@@ -4,7 +4,7 @@ use bevy_turborand::prelude::*;
 mod fbm_water;
 mod sum_water;
 
-const PLANE_LENGTH: f32 = 100.0;
+const PLANE_LENGTH: f32 = 10.0;
 const QUAD_RES: f32 = 10.0;
 
 #[derive(Resource, Debug, Clone, Copy)]
@@ -66,7 +66,7 @@ fn setup(
 ) {
     // Camera
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(PLANE_LENGTH, PLANE_LENGTH * 0.7, PLANE_LENGTH)
+        transform: Transform::from_xyz(PLANE_LENGTH, PLANE_LENGTH * 0.2, PLANE_LENGTH)
             .looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     });
@@ -76,7 +76,7 @@ fn setup(
         *wave_type,
         global_rng.as_mut(),
     ));
-    let fbm_water_material = fbm_materials.add(fbm_water::FbmWaterMaterial { time: 0.0 });
+    let fbm_water_material = fbm_materials.add(fbm_water::FbmWaterMaterial::new());
     commands.insert_resource(WaterMaterials {
         sum: sum_water_material.clone(),
         fbm: fbm_water_material,
@@ -97,8 +97,15 @@ fn setup(
     ));
 }
 
-fn update_time(mut materials: ResMut<Assets<sum_water::SumWaterMaterial>>, time: Res<Time>) {
-    for material in materials.iter_mut() {
+fn update_time(
+    mut sum_materials: ResMut<Assets<sum_water::SumWaterMaterial>>,
+    mut fbm_materials: ResMut<Assets<fbm_water::FbmWaterMaterial>>,
+    time: Res<Time>,
+) {
+    for material in sum_materials.iter_mut() {
+        material.1.time = time.elapsed_seconds_wrapped();
+    }
+    for material in fbm_materials.iter_mut() {
         material.1.time = time.elapsed_seconds_wrapped();
     }
 }

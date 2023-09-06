@@ -10,12 +10,12 @@ use bevy_turborand::prelude::*;
 use std::{f32::consts::PI, ops::RangeInclusive};
 
 const WAVE_COUNT: usize = 4;
-const MEDIAN_WAVELENGTH: f32 = 8.0;
+const MEDIAN_WAVELENGTH: f32 = 1.0;
 const WAVELENGTH_RANGE: f32 = 1.0;
 const MEDIAN_DIRECTION: f32 = 0.0;
 const DIRECTIONAL_RANGE: f32 = 30.0 * PI / 180.0;
-const MEDIAN_AMPLITUDE: f32 = 1.0;
-const MEDIAN_SPEED: f32 = 1.0;
+const MEDIAN_AMPLITUDE: f32 = 0.1;
+const MEDIAN_SPEED: f32 = 0.5;
 const SPEED_RANGE: f32 = 0.1;
 
 #[derive(Resource, Debug, Clone, Copy)]

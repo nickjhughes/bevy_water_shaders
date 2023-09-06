@@ -7,9 +7,10 @@ use bevy::{
     },
 };
 
+#[derive(Debug, Clone)]
 pub struct FbmWaterConfig {
+    // Vertex shader
     vertex_wave_count: usize,
-    fragment_wave_count: usize,
     vertex_seed: f32,
     vertex_seed_iter: f32,
     vertex_frequency: f32,
@@ -22,6 +23,8 @@ pub struct FbmWaterConfig {
     vertex_height: f32,
     vertex_max_peak: f32,
     vertex_peak_offset: f32,
+    // Fragment shader
+    fragment_wave_count: usize,
     fragment_seed: f32,
     fragment_seed_iter: f32,
     fragment_frequency: f32,
@@ -70,21 +73,100 @@ impl Default for FbmWaterConfig {
 }
 
 /// "Fractional Brownian Motion" based water material.
-#[derive(AsBindGroup, TypeUuid, TypePath, Debug, Clone)]
+#[derive(AsBindGroup, TypeUuid, TypePath, Debug, Clone, Default)]
 #[uniform(0, FbmMaterialUniform)]
 #[uuid = "5f37d7f4-3403-4639-9d92-b4e5832e1514"]
 pub struct FbmWaterMaterial {
     pub time: f32,
+    pub fbm_config: FbmWaterConfig,
+    pub ambient: Color,
+    pub diffuse_reflectance: Color,
+    pub specular_reflectance: Color,
+    pub shininess: f32,
+}
+
+impl FbmWaterMaterial {
+    pub fn new() -> Self {
+        FbmWaterMaterial {
+            ambient: Color::rgba_u8(0, 43, 77, 255),
+            diffuse_reflectance: Color::rgba_u8(0, 43, 77, 255),
+            specular_reflectance: Color::WHITE,
+            shininess: 1.0,
+            ..default()
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, ShaderType)]
 struct FbmMaterialUniform {
     time: f32,
+    ambient: Color,
+    diffuse_reflectance: Color,
+    specular_reflectance: Color,
+    shininess: f32,
+    vertex_wave_count: u32,
+    vertex_seed: f32,
+    vertex_seed_iter: f32,
+    vertex_frequency: f32,
+    vertex_frequency_mult: f32,
+    vertex_amplitude: f32,
+    vertex_amplitude_mult: f32,
+    vertex_initial_speed: f32,
+    vertex_speed_ramp: f32,
+    vertex_drag: f32,
+    vertex_height: f32,
+    vertex_max_peak: f32,
+    vertex_peak_offset: f32,
+    fragment_wave_count: u32,
+    fragment_seed: f32,
+    fragment_seed_iter: f32,
+    fragment_frequency: f32,
+    fragment_frequency_mult: f32,
+    fragment_amplitude: f32,
+    fragment_amplitude_mult: f32,
+    fragment_initial_speed: f32,
+    fragment_speed_ramp: f32,
+    fragment_drag: f32,
+    fragment_height: f32,
+    fragment_max_peak: f32,
+    fragment_peak_offset: f32,
 }
 
 impl AsBindGroupShaderType<FbmMaterialUniform> for FbmWaterMaterial {
     fn as_bind_group_shader_type(&self, _images: &RenderAssets<Image>) -> FbmMaterialUniform {
-        FbmMaterialUniform { time: self.time }
+        FbmMaterialUniform {
+            time: self.time,
+            ambient: self.ambient,
+            diffuse_reflectance: self.diffuse_reflectance,
+            specular_reflectance: self.specular_reflectance,
+            shininess: self.shininess,
+            vertex_wave_count: self.fbm_config.vertex_wave_count as u32,
+            vertex_seed: self.fbm_config.vertex_seed,
+            vertex_seed_iter: self.fbm_config.vertex_seed_iter,
+            vertex_frequency: self.fbm_config.vertex_frequency,
+            vertex_frequency_mult: self.fbm_config.vertex_frequency_mult,
+            vertex_amplitude: self.fbm_config.vertex_amplitude,
+            vertex_amplitude_mult: self.fbm_config.vertex_amplitude_mult,
+            vertex_initial_speed: self.fbm_config.vertex_initial_speed,
+            vertex_speed_ramp: self.fbm_config.vertex_speed_ramp,
+            vertex_drag: self.fbm_config.vertex_drag,
+            vertex_height: self.fbm_config.vertex_height,
+            vertex_max_peak: self.fbm_config.vertex_max_peak,
+            vertex_peak_offset: self.fbm_config.vertex_peak_offset,
+            fragment_wave_count: self.fbm_config.fragment_wave_count as u32,
+            fragment_seed: self.fbm_config.fragment_seed,
+            fragment_seed_iter: self.fbm_config.fragment_seed_iter,
+            fragment_frequency: self.fbm_config.fragment_frequency,
+            fragment_frequency_mult: self.fbm_config.fragment_frequency_mult,
+            fragment_amplitude: self.fbm_config.fragment_amplitude,
+            fragment_amplitude_mult: self.fbm_config.fragment_amplitude_mult,
+            fragment_initial_speed: self.fbm_config.fragment_initial_speed,
+            fragment_speed_ramp: self.fbm_config.fragment_speed_ramp,
+            fragment_drag: self.fbm_config.fragment_drag,
+            fragment_height: self.fbm_config.fragment_height,
+            fragment_max_peak: self.fbm_config.fragment_max_peak,
+            fragment_peak_offset: self.fbm_config.fragment_peak_offset,
+        }
     }
 }
 
