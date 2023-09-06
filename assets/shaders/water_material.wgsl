@@ -21,18 +21,22 @@ struct WaterMaterial {
     shininess: f32,
 }
 // Each wave mat3x3 is:
-//  0: direction.x
-//  1: direction.y
-//  2: frequency
-//  3: amplitude
-//  4: phase
-//  5-8: unused
+//  [0][0]: direction.x
+//  [0][1]: direction.y
+//  [0][2]: frequency
+//  [1][0]: amplitude
+//  [1][1]: phase
+//  [1][2]: steepness
+//  [2][0]: type (0 = Sine, 1 = SteepSine)
+//  remainder: unused
 
 struct WaveSpec {
+    ty: f32,
     direction: vec2<f32>,
     frequency: f32,
     amplitude: f32,
     phase: f32,
+    steepness: f32,
 }
 
 @group(1) @binding(0)
@@ -53,33 +57,62 @@ fn get_time(wave: WaveSpec) -> f32 {
 fn sine_wave(world_position: vec4<f32>, wave: WaveSpec) -> f32 {
 	var xz: f32 = get_wave_coord(world_position, wave.direction);
 	var t: f32 = get_time(wave);
-
 	return wave.amplitude * sin(xz * wave.frequency + t);
 }
 
+fn steep_sine_wave(world_position: vec4<f32>, wave: WaveSpec) -> f32 {
+	var xz: f32 = get_wave_coord(world_position, wave.direction);
+	var t: f32 = get_time(wave);
+	return 2.0 * wave.amplitude * pow((sin(xz * wave.frequency + t) + 1.0) / 2.0, wave.steepness);
+}
+
 fn calculate_offset(world_position: vec4<f32>, wave: WaveSpec) -> vec3<f32> {
-    return vec3<f32>(0.0, sine_wave(world_position, wave), 0.0);
+    var offset: f32 = 0.0;
+    if wave.ty == 0.0 {
+        return vec3<f32>(0.0, sine_wave(world_position, wave), 0.0);
+    } else if wave.ty == 1.0 {
+        return vec3<f32>(0.0, steep_sine_wave(world_position, wave), 0.0);
+    }
+    return vec3<f32>(0.0, offset, 0.0);
 }
 
 fn sine_normal(world_position: vec4<f32>, wave: WaveSpec) -> vec3<f32> {
 	var xz: f32 = get_wave_coord(world_position, wave.direction);
 	var t: f32 = get_time(wave);
-	var n: vec2<f32> = wave.frequency * wave.amplitude * wave.direction * cos(xz * wave.frequency + t);
-	return vec3<f32>(n.x, n.y, 0.0);
+	var normal: vec2<f32> = wave.frequency * wave.amplitude * wave.direction * cos(xz * wave.frequency + t);
+	return vec3<f32>(normal.x, normal.y, 0.0);
+}
+
+fn steep_sine_normal(world_position: vec4<f32>, wave: WaveSpec) -> vec3<f32> {
+	var xz: f32 = get_wave_coord(world_position, wave.direction);
+	var t: f32 = get_time(wave);
+
+	var height: f32 = pow((sin(xz * wave.frequency + t) + 1.0) / 2.0, max(1.0, wave.steepness - 1.0));
+	var normal: vec2<f32> = wave.direction * wave.steepness * wave.frequency * wave.amplitude * height * cos(xz * wave.frequency + t);
+
+	return vec3<f32>(normal.x, normal.y, 0.0);
 }
 
 fn calculate_normal(world_position: vec4<f32>, wave: WaveSpec) -> vec3<f32> {
-    return sine_normal(world_position, wave);
+    var normal: vec3<f32> = vec3<f32>(0.0);
+    if wave.ty == 0.0 {
+        normal = sine_normal(world_position, wave);
+    } else if wave.ty == 1.0 {
+        normal = steep_sine_normal(world_position, wave);
+    }
+    return normal;
 }
 
 fn get_waves() -> array<WaveSpec, WAVE_COUNT> {
     var waves = array<WaveSpec, WAVE_COUNT>();
     for (var i = 0; i < WAVE_COUNT; i++) {
         waves[i] = WaveSpec(
+            material.waves[i][2][0],                                     // type
             vec2<f32>(material.waves[i][0][0], material.waves[i][0][1]), // direction
             material.waves[i][0][2],                                     // frequency
             material.waves[i][1][0],                                     // amplitude
-            material.waves[i][1][1]                                      // phase
+            material.waves[i][1][1],                                     // phase
+            material.waves[i][1][2]                                      // steepness
         );
     }
     return waves;

@@ -28,6 +28,7 @@ fn main() {
             RngPlugin::default(),
             MaterialPlugin::<WaterMaterial>::default(),
         ))
+        .insert_resource(WaveType::SteepSine)
         .add_systems(Startup, setup)
         .add_systems(
             Update,
@@ -35,6 +36,7 @@ fn main() {
                 update_time,
                 rotate_camera,
                 regenerate_waves,
+                change_wave_type,
                 bevy::window::close_on_esc,
             ),
         )
@@ -46,6 +48,7 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<WaterMaterial>>,
     mut global_rng: ResMut<GlobalRng>,
+    wave_type: Res<WaveType>,
 ) {
     // Camera
     commands.spawn(Camera3dBundle {
@@ -55,7 +58,7 @@ fn setup(
     });
 
     // Water
-    let water_material = WaterMaterial::random(global_rng.as_mut());
+    let water_material = WaterMaterial::random(wave_type.clone(), global_rng.as_mut());
     commands.spawn(MaterialMeshBundle {
         mesh: meshes.add(
             shape::Plane {
@@ -110,47 +113,91 @@ fn regenerate_waves(
     }
 }
 
+fn change_wave_type(
+    mut commands: Commands,
+    mut materials: ResMut<Assets<WaterMaterial>>,
+    wave_type: Res<WaveType>,
+    keyboard_input: Res<Input<KeyCode>>,
+) {
+    if keyboard_input.just_pressed(KeyCode::W) {
+        let new_wave_type = wave_type.as_ref().cycle();
+        commands.insert_resource(new_wave_type);
+
+        for material in materials.iter_mut() {
+            for wave in material.1.waves.iter_mut() {
+                wave.ty = new_wave_type;
+            }
+        }
+    }
+}
+
 // #[derive(Component)]
 // struct Sun {
 //     color: Color,
 //     direction: Vec3,
 // }
 
+#[derive(Resource, Debug, Clone, Copy)]
+enum WaveType {
+    Sine = 0,
+    SteepSine = 1,
+}
+
+impl WaveType {
+    fn cycle(&self) -> WaveType {
+        match self {
+            WaveType::Sine => WaveType::SteepSine,
+            WaveType::SteepSine => WaveType::Sine,
+        }
+    }
+}
+
 #[derive(Component, Debug, Clone)]
 struct WaveSpec {
+    ty: WaveType,
     direction: Vec2,
     frequency: f32,
     amplitude: f32,
     phase: f32,
+    steepness: f32,
 }
 
 impl From<WaveSpec> for Mat3 {
     fn from(wave: WaveSpec) -> Self {
         Mat3::from_cols(
             Vec3::new(wave.direction.x, wave.direction.y, wave.frequency),
-            Vec3::new(wave.amplitude, wave.phase, 0.0),
-            Vec3::ZERO,
+            Vec3::new(wave.amplitude, wave.phase, wave.steepness),
+            Vec3::new((wave.ty as u32) as f32, 0.0, 0.0),
         )
     }
 }
 
 impl Default for WaveSpec {
     fn default() -> Self {
-        WaveSpec::new(0.0, 1.0, 1.0, 1.0)
+        WaveSpec::new(WaveType::Sine, 0.0, 1.0, 1.0, 1.0, 1.0)
     }
 }
 
 impl WaveSpec {
-    fn new(direction: f32, speed: f32, amplitude: f32, wavelength: f32) -> Self {
+    fn new(
+        ty: WaveType,
+        direction: f32,
+        speed: f32,
+        amplitude: f32,
+        wavelength: f32,
+        steepness: f32,
+    ) -> Self {
         WaveSpec {
+            ty,
             direction: Vec2::new(direction.cos(), direction.sin()),
             frequency: 2.0 / wavelength,
             amplitude,
             phase: speed * (9.8 * 2.0 * PI / wavelength).sqrt(),
+            steepness,
         }
     }
 
-    fn random(rng: &mut GlobalRng) -> Self {
+    fn random(ty: WaveType, rng: &mut GlobalRng) -> Self {
         let wavelength = random_f32_range(
             rng,
             (MEDIAN_WAVELENGTH / (1.0 + WAVELENGTH_RANGE))
@@ -165,7 +212,8 @@ impl WaveSpec {
             rng,
             ((MEDIAN_SPEED - SPEED_RANGE).max(0.01))..=(MEDIAN_SPEED + SPEED_RANGE),
         );
-        WaveSpec::new(direction, speed, amplitude, wavelength)
+        let steepness = 2.0;
+        WaveSpec::new(ty, direction, speed, amplitude, wavelength, steepness)
     }
 }
 
@@ -197,10 +245,10 @@ struct WaterMaterial {
 // }
 
 impl WaterMaterial {
-    fn random(rng: &mut GlobalRng) -> Self {
+    fn random(wave_type: WaveType, rng: &mut GlobalRng) -> Self {
         let waves: [WaveSpec; WAVE_COUNT] = {
             let mut v = Vec::new();
-            v.resize_with(WAVE_COUNT, || WaveSpec::random(rng));
+            v.resize_with(WAVE_COUNT, || WaveSpec::random(wave_type, rng));
             v.try_into().unwrap()
         };
         WaterMaterial {
@@ -214,9 +262,10 @@ impl WaterMaterial {
     }
 
     fn randomize(&mut self, rng: &mut GlobalRng) {
+        let wave_type = self.waves[0].ty;
         self.waves = {
             let mut v = Vec::new();
-            v.resize_with(WAVE_COUNT, || WaveSpec::random(rng));
+            v.resize_with(WAVE_COUNT, || WaveSpec::random(wave_type, rng));
             v.try_into().unwrap()
         };
     }
