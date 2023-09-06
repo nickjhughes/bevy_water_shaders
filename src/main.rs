@@ -13,7 +13,7 @@ const PLANE_LENGTH: f32 = 100.0;
 const QUAD_RES: f32 = 10.0;
 
 const WAVE_COUNT: usize = 4;
-const MEDIAN_WAVELENGTH: f32 = 1.0;
+const MEDIAN_WAVELENGTH: f32 = 8.0;
 const WAVELENGTH_RANGE: f32 = 1.0;
 const MEDIAN_DIRECTION: f32 = 0.0;
 const DIRECTIONAL_RANGE: f32 = 30.0 * PI / 180.0;
@@ -22,8 +22,6 @@ const MEDIAN_SPEED: f32 = 1.0;
 const SPEED_RANGE: f32 = 0.1;
 
 fn main() {
-    assert_eq!(WAVE_COUNT, 4);
-
     App::new()
         .add_plugins((
             DefaultPlugins,
@@ -53,7 +51,6 @@ fn setup(
 
     // Water
     let water_material = WaterMaterial::random(global_rng.as_mut());
-    info!("{:?}", &water_material);
     commands.spawn(MaterialMeshBundle {
         mesh: meshes.add(
             shape::Plane {
