@@ -1,5 +1,7 @@
 #import bevy_pbr::mesh_functions as mesh_functions
+#import bevy_pbr::mesh_view_bindings as view_bindings
 #import bevy_pbr::mesh_bindings mesh
+#import bevy_pbr::pbr_functions as pbr_functions
 
 const PI: f32 = 3.1415926538;
 const WAVE_COUNT: i32 = 4;
@@ -13,6 +15,10 @@ struct MeshVertexOutput {
 struct WaterMaterial {
     time: f32,
     waves: array<mat3x3<f32>, WAVE_COUNT>,
+    ambient: vec4<f32>,
+    diffuse_reflectance: vec4<f32>,
+    specular_reflectance: vec4<f32>,
+    shininess: f32,
 }
 // Each wave mat3x3 is:
 //  0: direction.x
@@ -103,9 +109,12 @@ fn fragment(
 ) -> @location(0) vec4<f32> {
     var waves = get_waves();
 
-    // var light_direction: vec3<f32> = -normalize(material.sun_direction);
-    // var view_direction: vec3<f32> = normalize(_WorldSpaceCameraPos - i.worldPos);
-    // var halfway_direction: vec3<f32> = normalize(light_direction + view_direction);
+    var sun_direction = vec3<f32>(1.0, -1.0, 1.0);
+    var sun_color = vec4<f32>(1.0, 1.0, 1.0, 1.0);
+
+    var light_direction: vec3<f32> = -normalize(sun_direction);
+    var view_direction: vec3<f32> = pbr_functions::calculate_view(mesh.world_position, false);
+    var halfway_direction: vec3<f32> = normalize(light_direction + view_direction);
 
     var normal: vec3<f32> = vec3<f32>(0.0);
     var height: f32 = 0.0;
@@ -114,10 +123,10 @@ fn fragment(
     }
     normal = mesh_functions::mesh_normal_local_to_world(normalize(vec3<f32>(-normal.x, 1.0, -normal.y)));
 
-    // var ndotl: f32 = saturate(dot(light_direction, normal));
+    var ndotl: f32 = saturate(dot(light_direction, normal));
 
-    // var diffuse_reflectance: f32 = matieral.diffuse_reflectance / PI;
-    // var diffuse: f32 = material.light_color0.rgb * ndotl * diffuse_reflectance;
+    var diffuse_reflectance: vec3<f32> = material.diffuse_reflectance.xyz / PI;
+    var diffuse: vec3<f32> = sun_color.rgb * ndotl * diffuse_reflectance;
 
     // Schlick Fresnel
     // float3 fresnel_normal = normal;
@@ -130,12 +139,10 @@ fn fragment(
 
     // float3 fresnel = material.fresnel_color * R;
 
-    // float3 specularReflectance = _SpecularReflectance;
-    // float3 specNormal = normal;
-    // specNormal.xz *= _SpecularNormalStrength;
-    // specNormal = normalize(specNormal);
-    // float spec = pow(DotClamped(specNormal, halfwayDir), _Shininess) * ndotl;
-    // float3 specular = _LightColor0.rgb * specularReflectance * spec;
+    var specular_reflectance: vec3<f32> = material.specular_reflectance.rgb;
+    var specular_normal: vec3<f32> = normal;
+    var specular_amount: f32 = pow(saturate(dot(specular_normal, halfway_direction)), material.shininess * 100.0) * ndotl;
+    var specular: vec3<f32> = sun_color.rgb * specular_reflectance * specular_amount;
 
     // Schlick Fresnel but again for specular
     // base = 1 - DotClamped(view_direction, halfway_direction);
@@ -145,7 +152,9 @@ fn fragment(
 
     // var tip_color: vec3<f32> = material.tip_color * pow(height, material.tip_attenuation);
     // var output: vec3<f32> = material.ambient + diffuse + specular + fresnel + tip_color;
-    // return vec4<f32>(output, 1.0);
+    var output: vec3<f32> = material.ambient.rgb + diffuse + specular;
+    return vec4<f32>(output, 1.0);
 
-    return vec4<f32>(normal.x, normal.y, normal.z, 1.0);
+    // return vec4<f32>(normal.x, normal.y, normal.z, 1.0);
+    // return material.diffuse_reflectance;
 }

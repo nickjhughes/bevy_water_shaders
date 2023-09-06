@@ -31,7 +31,12 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(
             Update,
-            (update_time, regenerate_waves, bevy::window::close_on_esc),
+            (
+                update_time,
+                rotate_camera,
+                regenerate_waves,
+                bevy::window::close_on_esc,
+            ),
         )
         .run();
 }
@@ -63,17 +68,34 @@ fn setup(
         ..default()
     });
 
-    // Light
-    // commands.spawn(PointLightBundle {
-    //     transform: Transform::from_xyz(3.0, 8.0, 5.0),
-    //     ..default()
-    // });
+    // Sun
+    // commands.spawn((
+    //     SpatialBundle {
+    //         transform: Transform::from_xyz(0.0, 10.0, 0.0),
+    //         ..default()
+    //     },
+    //     Sun {
+    //         color: Color::WHITE,
+    //         direction: Vec3::Y,
+    //     },
+    // ));
 }
 
 fn update_time(mut materials: ResMut<Assets<WaterMaterial>>, time: Res<Time>) {
     for material in materials.iter_mut() {
         material.1.time = time.elapsed_seconds_wrapped();
     }
+}
+
+fn rotate_camera(mut camera_query: Query<&mut Transform, With<Camera>>, time: Res<Time>) {
+    const CAMERA_ROTATION_SPEED: f32 = 0.1;
+    let mut camera_transform = camera_query.single_mut();
+    *camera_transform = Transform::from_xyz(
+        1.2 * PLANE_LENGTH * (time.elapsed_seconds_wrapped() * CAMERA_ROTATION_SPEED).cos(),
+        camera_transform.translation.y,
+        1.2 * PLANE_LENGTH * (time.elapsed_seconds_wrapped() * CAMERA_ROTATION_SPEED).sin(),
+    )
+    .looking_at(Vec3::ZERO, Vec3::Y);
 }
 
 fn regenerate_waves(
@@ -88,7 +110,13 @@ fn regenerate_waves(
     }
 }
 
-#[derive(Debug, Clone)]
+// #[derive(Component)]
+// struct Sun {
+//     color: Color,
+//     direction: Vec3,
+// }
+
+#[derive(Component, Debug, Clone)]
 struct WaveSpec {
     direction: Vec2,
     frequency: f32,
@@ -145,13 +173,28 @@ fn random_f32_range(rng: &mut GlobalRng, range: RangeInclusive<f32>) -> f32 {
     rng.f32() * (range.end() - range.start()) + range.start()
 }
 
-#[derive(AsBindGroup, TypeUuid, TypePath, Debug, Clone, Default)]
+#[derive(AsBindGroup, TypeUuid, TypePath, Debug, Clone)]
 #[uniform(0, WaterMaterialUniform)]
 #[uuid = "d3a49f45-e0ab-49bb-bc8c-bdb020d289a6"]
 struct WaterMaterial {
     time: f32,
     waves: [WaveSpec; WAVE_COUNT],
+    ambient: Color,
+    diffuse_reflectance: Color,
+    specular_reflectance: Color,
+    shininess: f32,
+    // fresnel: Fresnel,
+    // tip_color: Color,
+    // tip_attenuation: f32,
 }
+
+// #[derive(Debug, Clone)]
+// struct Fresnel {
+//     color: Color,
+//     bias: f32,
+//     strength: f32,
+//     shininess: f32,
+// }
 
 impl WaterMaterial {
     fn random(rng: &mut GlobalRng) -> Self {
@@ -160,7 +203,14 @@ impl WaterMaterial {
             v.resize_with(WAVE_COUNT, || WaveSpec::random(rng));
             v.try_into().unwrap()
         };
-        WaterMaterial { time: 0.0, waves }
+        WaterMaterial {
+            time: 0.0,
+            ambient: Color::rgba_u8(0, 43, 77, 255),
+            diffuse_reflectance: Color::rgba_u8(0, 43, 77, 255),
+            specular_reflectance: Color::WHITE,
+            shininess: 1.0,
+            waves,
+        }
     }
 
     fn randomize(&mut self, rng: &mut GlobalRng) {
@@ -176,13 +226,21 @@ impl WaterMaterial {
 struct WaterMaterialUniform {
     time: f32,
     waves: [Mat3; WAVE_COUNT],
+    ambient: Color,
+    diffuse_reflectance: Color,
+    specular_reflectance: Color,
+    shininess: f32,
 }
 
 impl AsBindGroupShaderType<WaterMaterialUniform> for WaterMaterial {
     fn as_bind_group_shader_type(&self, _images: &RenderAssets<Image>) -> WaterMaterialUniform {
         WaterMaterialUniform {
             time: self.time,
-            waves: self.waves.clone().map(|w| Mat3::from(w)),
+            waves: self.waves.clone().map(Mat3::from),
+            ambient: self.ambient,
+            diffuse_reflectance: self.diffuse_reflectance,
+            specular_reflectance: self.specular_reflectance,
+            shininess: self.shininess,
         }
     }
 }
