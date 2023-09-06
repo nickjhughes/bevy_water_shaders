@@ -142,8 +142,8 @@ fn fragment(
 ) -> @location(0) vec4<f32> {
     var waves = get_waves();
 
-    var sun_direction = vec3<f32>(1.0, -1.0, 1.0);
-    var sun_color = vec4<f32>(1.0, 1.0, 1.0, 1.0);
+    var sun_direction = vec3<f32>(1.0, -1.0, 0.0);
+    var sun_color = vec4<f32>(3.0, 1.9, 0.9, 1.0);
 
     var light_direction: vec3<f32> = -normalize(sun_direction);
     var view_direction: vec3<f32> = pbr_functions::calculate_view(mesh.world_position, false);

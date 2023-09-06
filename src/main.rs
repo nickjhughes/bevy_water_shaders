@@ -4,7 +4,7 @@ use bevy_turborand::prelude::*;
 mod fbm_water;
 mod sum_water;
 
-const PLANE_LENGTH: f32 = 10.0;
+const PLANE_LENGTH: f32 = 100.0;
 const QUAD_RES: f32 = 10.0;
 
 #[derive(Resource, Debug, Clone, Copy)]
@@ -39,14 +39,15 @@ fn main() {
             MaterialPlugin::<sum_water::SumWaterMaterial>::default(),
             MaterialPlugin::<fbm_water::FbmWaterMaterial>::default(),
         ))
+        .insert_resource(ClearColor(Color::rgb_u8(203, 180, 152)))
         .insert_resource(sum_water::WaveType::SteepSine)
-        .insert_resource(WaveMethod::SumOfSines)
+        .insert_resource(WaveMethod::Fbm)
         .add_systems(Startup, setup)
         .add_systems(
             Update,
             (
                 update_time,
-                rotate_camera,
+                // rotate_camera,
                 regenerate_waves,
                 change_wave_type,
                 change_wave_method,
@@ -63,15 +64,23 @@ fn setup(
     mut fbm_materials: ResMut<Assets<fbm_water::FbmWaterMaterial>>,
     mut global_rng: ResMut<GlobalRng>,
     wave_type: Res<sum_water::WaveType>,
+    wave_method: Res<WaveMethod>,
 ) {
     // Camera
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(PLANE_LENGTH, PLANE_LENGTH * 0.2, PLANE_LENGTH)
+        transform: Transform::from_xyz(PLANE_LENGTH * 0.5, 3.0, 0.0)
             .looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     });
 
     // Water
+    let mesh = meshes.add(
+        shape::Plane {
+            size: PLANE_LENGTH,
+            subdivisions: (PLANE_LENGTH * QUAD_RES).round() as u32,
+        }
+        .into(),
+    );
     let sum_water_material = sum_materials.add(sum_water::SumWaterMaterial::random(
         *wave_type,
         global_rng.as_mut(),
@@ -79,22 +88,26 @@ fn setup(
     let fbm_water_material = fbm_materials.add(fbm_water::FbmWaterMaterial::new());
     commands.insert_resource(WaterMaterials {
         sum: sum_water_material.clone(),
-        fbm: fbm_water_material,
+        fbm: fbm_water_material.clone(),
     });
-    commands.spawn((
-        Water,
-        MaterialMeshBundle {
-            mesh: meshes.add(
-                shape::Plane {
-                    size: PLANE_LENGTH,
-                    subdivisions: (PLANE_LENGTH * QUAD_RES).round() as u32,
-                }
-                .into(),
-            ),
-            material: sum_water_material,
-            ..default()
-        },
-    ));
+    match wave_method.as_ref() {
+        WaveMethod::SumOfSines => commands.spawn((
+            Water,
+            MaterialMeshBundle {
+                mesh,
+                material: sum_water_material,
+                ..default()
+            },
+        )),
+        WaveMethod::Fbm => commands.spawn((
+            Water,
+            MaterialMeshBundle {
+                mesh,
+                material: fbm_water_material,
+                ..default()
+            },
+        )),
+    };
 }
 
 fn update_time(
@@ -110,16 +123,16 @@ fn update_time(
     }
 }
 
-fn rotate_camera(mut camera_query: Query<&mut Transform, With<Camera>>, time: Res<Time>) {
-    const CAMERA_ROTATION_SPEED: f32 = 0.1;
-    let mut camera_transform = camera_query.single_mut();
-    *camera_transform = Transform::from_xyz(
-        1.2 * PLANE_LENGTH * (time.elapsed_seconds_wrapped() * CAMERA_ROTATION_SPEED).cos(),
-        camera_transform.translation.y,
-        1.2 * PLANE_LENGTH * (time.elapsed_seconds_wrapped() * CAMERA_ROTATION_SPEED).sin(),
-    )
-    .looking_at(Vec3::ZERO, Vec3::Y);
-}
+// fn rotate_camera(mut camera_query: Query<&mut Transform, With<Camera>>, time: Res<Time>) {
+//     const CAMERA_ROTATION_SPEED: f32 = 0.1;
+//     let mut camera_transform = camera_query.single_mut();
+//     *camera_transform = Transform::from_xyz(
+//         1.2 * PLANE_LENGTH * (time.elapsed_seconds_wrapped() * CAMERA_ROTATION_SPEED).cos(),
+//         camera_transform.translation.y,
+//         1.2 * PLANE_LENGTH * (time.elapsed_seconds_wrapped() * CAMERA_ROTATION_SPEED).sin(),
+//     )
+//     .looking_at(Vec3::ZERO, Vec3::Y);
+// }
 
 fn regenerate_waves(
     mut sum_materials: ResMut<Assets<sum_water::SumWaterMaterial>>,

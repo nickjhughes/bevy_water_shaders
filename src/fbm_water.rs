@@ -42,7 +42,7 @@ pub struct FbmWaterConfig {
 impl Default for FbmWaterConfig {
     fn default() -> Self {
         FbmWaterConfig {
-            vertex_wave_count: 8,
+            vertex_wave_count: 40,
             fragment_wave_count: 40,
             vertex_seed: 0.0,
             vertex_seed_iter: 1253.2131,
