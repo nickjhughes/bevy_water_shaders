@@ -113,18 +113,18 @@ pub struct SumWaterMaterial {
     pub diffuse_reflectance: Color,
     pub specular_reflectance: Color,
     pub shininess: f32,
-    // fresnel: Fresnel,
-    // tip_color: Color,
-    // tip_attenuation: f32,
+    pub fresnel: Fresnel,
+    pub tip_color: Color,
+    pub tip_attenuation: f32,
 }
 
-// #[derive(Debug, Clone)]
-// struct Fresnel {
-//     color: Color,
-//     bias: f32,
-//     strength: f32,
-//     shininess: f32,
-// }
+#[derive(Debug, Clone)]
+pub struct Fresnel {
+    pub color: Color,
+    pub bias: f32,
+    pub strength: f32,
+    pub shininess: f32,
+}
 
 impl SumWaterMaterial {
     pub fn random(wave_type: WaveType, rng: &mut GlobalRng) -> Self {
@@ -135,11 +135,19 @@ impl SumWaterMaterial {
         };
         SumWaterMaterial {
             time: 0.0,
+            waves,
             ambient: Color::rgba_u8(0, 43, 77, 255),
             diffuse_reflectance: Color::rgba_u8(0, 43, 77, 255),
             specular_reflectance: Color::WHITE,
             shininess: 1.0,
-            waves,
+            fresnel: Fresnel {
+                color: Color::WHITE,
+                bias: 0.5,
+                strength: 0.5,
+                shininess: 10.0,
+            },
+            tip_color: Color::WHITE,
+            tip_attenuation: 0.5,
         }
     }
 
@@ -161,6 +169,12 @@ struct WaterMaterialUniform {
     diffuse_reflectance: Color,
     specular_reflectance: Color,
     shininess: f32,
+    fresnel_color: Color,
+    fresnel_bias: f32,
+    fresnel_strength: f32,
+    fresnel_shininess: f32,
+    tip_attenuation: f32,
+    tip_color: Color,
 }
 
 impl AsBindGroupShaderType<WaterMaterialUniform> for SumWaterMaterial {
@@ -172,6 +186,12 @@ impl AsBindGroupShaderType<WaterMaterialUniform> for SumWaterMaterial {
             diffuse_reflectance: self.diffuse_reflectance,
             specular_reflectance: self.specular_reflectance,
             shininess: self.shininess,
+            fresnel_color: self.fresnel.color,
+            fresnel_bias: self.fresnel.bias,
+            fresnel_strength: self.fresnel.strength,
+            fresnel_shininess: self.fresnel.shininess,
+            tip_attenuation: self.tip_attenuation,
+            tip_color: self.tip_color,
         }
     }
 }

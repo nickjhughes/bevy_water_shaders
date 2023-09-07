@@ -17,6 +17,12 @@ struct WaterMaterial {
     diffuse_reflectance: vec4<f32>,
     specular_reflectance: vec4<f32>,
     shininess: f32,
+    fresnel_color: vec4<f32>,
+    fresnel_bias: f32,
+    fresnel_strength: f32,
+    fresnel_shininess: f32,
+    tip_attenuation: f32,
+    tip_color: vec4<f32>,
     vertex_wave_count: u32,
     vertex_seed: f32,
     vertex_seed_iter: f32,
@@ -164,11 +170,30 @@ fn fragment(
     var diffuse_reflectance: vec3<f32> = material.diffuse_reflectance.xyz / PI;
     var diffuse: vec3<f32> = sun_color.rgb * ndotl * diffuse_reflectance;
 
+    // Schlick Fresnel
+    var fresnel_normal: vec3<f32> = normal;
+    // fresnel_normal.x *= material.fresnel_normal_strength;
+    // fresnel_normal.z *= material.fresnel_normal_strength;
+    // fresnel_normal = normalize(fresnel_normal);
+    var base: f32 = 1.0 - dot(view_direction, fresnel_normal);
+    var exponential: f32 = pow(base, material.fresnel_shininess);
+    var R: f32 = exponential + material.fresnel_bias * (1.0 - exponential);
+    R *= material.fresnel_strength;
+    var fresnel: vec3<f32> = material.fresnel_color.rgb * R;
+
     var specular_reflectance: vec3<f32> = material.specular_reflectance.rgb;
     var specular_normal: vec3<f32> = normal;
     var specular_amount: f32 = pow(saturate(dot(specular_normal, halfway_direction)), material.shininess * 100.0) * ndotl;
     var specular: vec3<f32> = sun_color.rgb * specular_reflectance * specular_amount;
 
-    var output: vec3<f32> = material.ambient.rgb + diffuse + specular;
+    // Schlick Fresnel but again for specular
+    base = 1.0 - saturate(dot(view_direction, halfway_direction));
+    exponential = pow(base, 5.0);
+    R = exponential + material.fresnel_bias * (1.0 - exponential);
+    specular *= R;
+
+    var tip_color: vec3<f32> = material.tip_color.rgb * pow(height, material.tip_attenuation);
+
+    var output: vec3<f32> = material.ambient.rgb + diffuse + specular + fresnel + tip_color;
     return vec4<f32>(output, 1.0);
 }

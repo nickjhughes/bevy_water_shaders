@@ -83,6 +83,17 @@ pub struct FbmWaterMaterial {
     pub diffuse_reflectance: Color,
     pub specular_reflectance: Color,
     pub shininess: f32,
+    pub fresnel: Fresnel,
+    pub tip_color: Color,
+    pub tip_attenuation: f32,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Fresnel {
+    pub color: Color,
+    pub bias: f32,
+    pub strength: f32,
+    pub shininess: f32,
 }
 
 impl FbmWaterMaterial {
@@ -92,6 +103,14 @@ impl FbmWaterMaterial {
             diffuse_reflectance: Color::rgba_u8(0, 43, 77, 255),
             specular_reflectance: Color::WHITE,
             shininess: 1.0,
+            fresnel: Fresnel {
+                color: Color::WHITE,
+                bias: 0.5,
+                strength: 0.5,
+                shininess: 10.0,
+            },
+            tip_color: Color::WHITE,
+            tip_attenuation: 0.5,
             ..default()
         }
     }
@@ -104,6 +123,12 @@ struct FbmMaterialUniform {
     diffuse_reflectance: Color,
     specular_reflectance: Color,
     shininess: f32,
+    fresnel_color: Color,
+    fresnel_bias: f32,
+    fresnel_strength: f32,
+    fresnel_shininess: f32,
+    tip_attenuation: f32,
+    tip_color: Color,
     vertex_wave_count: u32,
     vertex_seed: f32,
     vertex_seed_iter: f32,
@@ -140,6 +165,12 @@ impl AsBindGroupShaderType<FbmMaterialUniform> for FbmWaterMaterial {
             diffuse_reflectance: self.diffuse_reflectance,
             specular_reflectance: self.specular_reflectance,
             shininess: self.shininess,
+            fresnel_color: self.fresnel.color,
+            fresnel_bias: self.fresnel.bias,
+            fresnel_strength: self.fresnel.strength,
+            fresnel_shininess: self.fresnel.shininess,
+            tip_attenuation: self.tip_attenuation,
+            tip_color: self.tip_color,
             vertex_wave_count: self.fbm_config.vertex_wave_count as u32,
             vertex_seed: self.fbm_config.vertex_seed,
             vertex_seed_iter: self.fbm_config.vertex_seed_iter,

@@ -41,7 +41,7 @@ fn main() {
         ))
         .insert_resource(ClearColor(Color::rgb_u8(203, 180, 152)))
         .insert_resource(sum_water::WaveType::SteepSine)
-        .insert_resource(WaveMethod::Fbm)
+        .insert_resource(WaveMethod::SumOfSines)
         .add_systems(Startup, setup)
         .add_systems(
             Update,
