@@ -25,15 +25,6 @@ pub enum WaveType {
     SteepSine = 1,
 }
 
-impl WaveType {
-    pub fn cycle(&self) -> WaveType {
-        match self {
-            WaveType::Sine => WaveType::SteepSine,
-            WaveType::SteepSine => WaveType::Sine,
-        }
-    }
-}
-
 #[derive(Component, Debug, Clone)]
 pub struct WaveSpec {
     pub ty: WaveType,

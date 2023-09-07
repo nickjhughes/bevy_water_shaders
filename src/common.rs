@@ -33,7 +33,7 @@ impl Default for Shading {
                 shininess: 6.7,
             },
             tip_color: Color::WHITE,
-            tip_attenuation: 2.7,
+            tip_attenuation: 6.0,
         }
     }
 }

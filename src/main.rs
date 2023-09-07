@@ -7,6 +7,7 @@ use bevy_turborand::prelude::*;
 
 mod common;
 mod fbm_water;
+mod fft_water;
 mod sum_water;
 
 const PLANE_LENGTH: f32 = 100.0;
@@ -17,6 +18,7 @@ enum WaveMethod {
     SumOfSines,
     #[default]
     Fbm,
+    Fft,
 }
 
 #[derive(Component, Debug)]
@@ -26,6 +28,7 @@ struct Water;
 struct WaterMaterials {
     sum: Handle<sum_water::SumWaterMaterial>,
     fbm: Handle<fbm_water::FbmWaterMaterial>,
+    fft: Handle<fft_water::FftWaterMaterial>,
 }
 
 fn main() {
@@ -36,6 +39,7 @@ fn main() {
             EguiPlugin,
             MaterialPlugin::<sum_water::SumWaterMaterial>::default(),
             MaterialPlugin::<fbm_water::FbmWaterMaterial>::default(),
+            MaterialPlugin::<fft_water::FftWaterMaterial>::default(),
         ))
         .insert_resource(Msaa::Sample4)
         .insert_resource(ClearColor(Color::rgb_u8(203, 180, 152)))
@@ -65,6 +69,7 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut sum_materials: ResMut<Assets<sum_water::SumWaterMaterial>>,
     mut fbm_materials: ResMut<Assets<fbm_water::FbmWaterMaterial>>,
+    mut fft_materials: ResMut<Assets<fft_water::FftWaterMaterial>>,
     mut global_rng: ResMut<GlobalRng>,
     wave_type: Res<sum_water::WaveType>,
     wave_method: Res<WaveMethod>,
@@ -89,9 +94,11 @@ fn setup(
         global_rng.as_mut(),
     ));
     let fbm_water_material = fbm_materials.add(fbm_water::FbmWaterMaterial::new());
+    let fft_water_material = fft_materials.add(fft_water::FftWaterMaterial::default());
     commands.insert_resource(WaterMaterials {
         sum: sum_water_material.clone(),
         fbm: fbm_water_material.clone(),
+        fft: fft_water_material.clone(),
     });
     match wave_method.as_ref() {
         WaveMethod::SumOfSines => commands.spawn((
@@ -110,18 +117,30 @@ fn setup(
                 ..default()
             },
         )),
+        WaveMethod::Fft => commands.spawn((
+            Water,
+            MaterialMeshBundle {
+                mesh,
+                material: fft_water_material,
+                ..default()
+            },
+        )),
     };
 }
 
 fn update_time(
     mut sum_materials: ResMut<Assets<sum_water::SumWaterMaterial>>,
     mut fbm_materials: ResMut<Assets<fbm_water::FbmWaterMaterial>>,
+    mut fft_materials: ResMut<Assets<fft_water::FftWaterMaterial>>,
     time: Res<Time>,
 ) {
     for material in sum_materials.iter_mut() {
         material.1.time = time.elapsed_seconds_wrapped();
     }
     for material in fbm_materials.iter_mut() {
+        material.1.time = time.elapsed_seconds_wrapped();
+    }
+    for material in fft_materials.iter_mut() {
         material.1.time = time.elapsed_seconds_wrapped();
     }
 }
@@ -149,13 +168,28 @@ fn update_wave_method(
                 commands
                     .entity(entity)
                     .remove::<Handle<fbm_water::FbmWaterMaterial>>();
+                commands
+                    .entity(entity)
+                    .remove::<Handle<fft_water::FftWaterMaterial>>();
                 commands.entity(entity).insert(water_materials.sum.clone());
             }
             WaveMethod::Fbm => {
                 commands
                     .entity(entity)
                     .remove::<Handle<sum_water::SumWaterMaterial>>();
+                commands
+                    .entity(entity)
+                    .remove::<Handle<fft_water::FftWaterMaterial>>();
                 commands.entity(entity).insert(water_materials.fbm.clone());
+            }
+            WaveMethod::Fft => {
+                commands
+                    .entity(entity)
+                    .remove::<Handle<sum_water::SumWaterMaterial>>();
+                commands
+                    .entity(entity)
+                    .remove::<Handle<fbm_water::FbmWaterMaterial>>();
+                commands.entity(entity).insert(water_materials.fft.clone());
             }
         }
     }
@@ -212,9 +246,10 @@ fn ui_system(
                     ui.radio_value(
                         &mut ui_state.wave_method,
                         WaveMethod::SumOfSines,
-                        "Sum of Sines",
+                        "SumSines",
                     );
                     ui.radio_value(&mut ui_state.wave_method, WaveMethod::Fbm, "FBM");
+                    ui.radio_value(&mut ui_state.wave_method, WaveMethod::Fft, "FFT");
                 });
                 ui.end_row();
             });
@@ -268,7 +303,7 @@ fn ui_system(
 
                     ui.label("Tip Attenuation");
                     ui.add(
-                        egui::Slider::new(&mut ui_state.shading.tip_attenuation, 0.0..=5.0)
+                        egui::Slider::new(&mut ui_state.shading.tip_attenuation, 0.0..=10.0)
                             .step_by(0.1),
                     );
                     ui.end_row();
