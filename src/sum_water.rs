@@ -18,9 +18,10 @@ const MEDIAN_AMPLITUDE: f32 = 0.1;
 const MEDIAN_SPEED: f32 = 0.5;
 const SPEED_RANGE: f32 = 0.1;
 
-#[derive(Resource, Debug, Clone, Copy)]
+#[derive(Resource, Debug, Clone, Copy, Default, PartialEq)]
 pub enum WaveType {
     Sine = 0,
+    #[default]
     SteepSine = 1,
 }
 
@@ -109,21 +110,7 @@ fn random_f32_range(rng: &mut GlobalRng, range: RangeInclusive<f32>) -> f32 {
 pub struct SumWaterMaterial {
     pub time: f32,
     pub waves: [WaveSpec; WAVE_COUNT],
-    pub ambient: Color,
-    pub diffuse_reflectance: Color,
-    pub specular_reflectance: Color,
-    pub shininess: f32,
-    pub fresnel: Fresnel,
-    pub tip_color: Color,
-    pub tip_attenuation: f32,
-}
-
-#[derive(Debug, Clone)]
-pub struct Fresnel {
-    pub color: Color,
-    pub bias: f32,
-    pub strength: f32,
-    pub shininess: f32,
+    pub shading: super::common::Shading,
 }
 
 impl SumWaterMaterial {
@@ -136,18 +123,7 @@ impl SumWaterMaterial {
         SumWaterMaterial {
             time: 0.0,
             waves,
-            ambient: Color::rgba_u8(0, 43, 77, 255),
-            diffuse_reflectance: Color::rgba_u8(0, 43, 77, 255),
-            specular_reflectance: Color::WHITE,
-            shininess: 1.0,
-            fresnel: Fresnel {
-                color: Color::WHITE,
-                bias: 0.5,
-                strength: 0.5,
-                shininess: 10.0,
-            },
-            tip_color: Color::WHITE,
-            tip_attenuation: 0.5,
+            shading: super::common::Shading::default(),
         }
     }
 
@@ -182,16 +158,16 @@ impl AsBindGroupShaderType<WaterMaterialUniform> for SumWaterMaterial {
         WaterMaterialUniform {
             time: self.time,
             waves: self.waves.clone().map(Mat3::from),
-            ambient: self.ambient,
-            diffuse_reflectance: self.diffuse_reflectance,
-            specular_reflectance: self.specular_reflectance,
-            shininess: self.shininess,
-            fresnel_color: self.fresnel.color,
-            fresnel_bias: self.fresnel.bias,
-            fresnel_strength: self.fresnel.strength,
-            fresnel_shininess: self.fresnel.shininess,
-            tip_attenuation: self.tip_attenuation,
-            tip_color: self.tip_color,
+            ambient: self.shading.ambient,
+            diffuse_reflectance: self.shading.diffuse_reflectance,
+            specular_reflectance: self.shading.specular_reflectance,
+            shininess: self.shading.shininess,
+            fresnel_color: self.shading.fresnel.color,
+            fresnel_bias: self.shading.fresnel.bias,
+            fresnel_strength: self.shading.fresnel.strength,
+            fresnel_shininess: self.shading.fresnel.shininess,
+            tip_attenuation: self.shading.tip_attenuation,
+            tip_color: self.shading.tip_color,
         }
     }
 }

@@ -10,33 +10,33 @@ use bevy::{
 #[derive(Debug, Clone)]
 pub struct FbmWaterConfig {
     // Vertex shader
-    vertex_wave_count: usize,
-    vertex_seed: f32,
-    vertex_seed_iter: f32,
-    vertex_frequency: f32,
-    vertex_frequency_mult: f32,
-    vertex_amplitude: f32,
-    vertex_amplitude_mult: f32,
-    vertex_initial_speed: f32,
-    vertex_speed_ramp: f32,
-    vertex_drag: f32,
-    vertex_height: f32,
-    vertex_max_peak: f32,
-    vertex_peak_offset: f32,
+    pub vertex_wave_count: usize,
+    pub vertex_seed: f32,
+    pub vertex_seed_iter: f32,
+    pub vertex_frequency: f32,
+    pub vertex_frequency_mult: f32,
+    pub vertex_amplitude: f32,
+    pub vertex_amplitude_mult: f32,
+    pub vertex_initial_speed: f32,
+    pub vertex_speed_ramp: f32,
+    pub vertex_drag: f32,
+    pub vertex_height: f32,
+    pub vertex_max_peak: f32,
+    pub vertex_peak_offset: f32,
     // Fragment shader
-    fragment_wave_count: usize,
-    fragment_seed: f32,
-    fragment_seed_iter: f32,
-    fragment_frequency: f32,
-    fragment_frequency_mult: f32,
-    fragment_amplitude: f32,
-    fragment_amplitude_mult: f32,
-    fragment_initial_speed: f32,
-    fragment_speed_ramp: f32,
-    fragment_drag: f32,
-    fragment_height: f32,
-    fragment_max_peak: f32,
-    fragment_peak_offset: f32,
+    pub fragment_wave_count: usize,
+    pub fragment_seed: f32,
+    pub fragment_seed_iter: f32,
+    pub fragment_frequency: f32,
+    pub fragment_frequency_mult: f32,
+    pub fragment_amplitude: f32,
+    pub fragment_amplitude_mult: f32,
+    pub fragment_initial_speed: f32,
+    pub fragment_speed_ramp: f32,
+    pub fragment_drag: f32,
+    pub fragment_height: f32,
+    pub fragment_max_peak: f32,
+    pub fragment_peak_offset: f32,
 }
 
 impl Default for FbmWaterConfig {
@@ -79,40 +79,12 @@ impl Default for FbmWaterConfig {
 pub struct FbmWaterMaterial {
     pub time: f32,
     pub fbm_config: FbmWaterConfig,
-    pub ambient: Color,
-    pub diffuse_reflectance: Color,
-    pub specular_reflectance: Color,
-    pub shininess: f32,
-    pub fresnel: Fresnel,
-    pub tip_color: Color,
-    pub tip_attenuation: f32,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct Fresnel {
-    pub color: Color,
-    pub bias: f32,
-    pub strength: f32,
-    pub shininess: f32,
+    pub shading: super::common::Shading,
 }
 
 impl FbmWaterMaterial {
     pub fn new() -> Self {
-        FbmWaterMaterial {
-            ambient: Color::rgba_u8(0, 43, 77, 255),
-            diffuse_reflectance: Color::rgba_u8(0, 43, 77, 255),
-            specular_reflectance: Color::WHITE,
-            shininess: 1.0,
-            fresnel: Fresnel {
-                color: Color::WHITE,
-                bias: 0.5,
-                strength: 0.5,
-                shininess: 10.0,
-            },
-            tip_color: Color::WHITE,
-            tip_attenuation: 0.5,
-            ..default()
-        }
+        FbmWaterMaterial::default()
     }
 }
 
@@ -161,16 +133,16 @@ impl AsBindGroupShaderType<FbmMaterialUniform> for FbmWaterMaterial {
     fn as_bind_group_shader_type(&self, _images: &RenderAssets<Image>) -> FbmMaterialUniform {
         FbmMaterialUniform {
             time: self.time,
-            ambient: self.ambient,
-            diffuse_reflectance: self.diffuse_reflectance,
-            specular_reflectance: self.specular_reflectance,
-            shininess: self.shininess,
-            fresnel_color: self.fresnel.color,
-            fresnel_bias: self.fresnel.bias,
-            fresnel_strength: self.fresnel.strength,
-            fresnel_shininess: self.fresnel.shininess,
-            tip_attenuation: self.tip_attenuation,
-            tip_color: self.tip_color,
+            ambient: self.shading.ambient,
+            diffuse_reflectance: self.shading.diffuse_reflectance,
+            specular_reflectance: self.shading.specular_reflectance,
+            shininess: self.shading.shininess,
+            fresnel_color: self.shading.fresnel.color,
+            fresnel_bias: self.shading.fresnel.bias,
+            fresnel_strength: self.shading.fresnel.strength,
+            fresnel_shininess: self.shading.fresnel.shininess,
+            tip_attenuation: self.shading.tip_attenuation,
+            tip_color: self.shading.tip_color,
             vertex_wave_count: self.fbm_config.vertex_wave_count as u32,
             vertex_seed: self.fbm_config.vertex_seed,
             vertex_seed_iter: self.fbm_config.vertex_seed_iter,
